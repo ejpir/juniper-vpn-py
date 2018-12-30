@@ -591,7 +591,7 @@ class tncc_server(object):
         hc_cookie=self.tncc.find_cookie('DSPREAUTH_HC').value
         self.tncc.setup_mechanize()
 	self.tncc.get_cookie(hc_cookie, 'url_default').value
-        logging.info("==== End periodic host checking... Next host check scheduled...")
+        logging.info("==== Next host periodic host check about to be scheduled...")
 	sc.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (sc,))
 
     def process_cmd(self):
@@ -614,7 +614,7 @@ class tncc_server(object):
             self.tncc.set_cookie('DSPREAUTH_HC', args['Cookie'])
             self.hc_scheduler.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (self.hc_scheduler,))
             self.hc_scheduler.run()
-            logging.debug("==== Performed first periodic host check, going into a timed loop...")
+            logging.info("==== Performed first periodic host check, going into a timed host checking loop...")
 
 if __name__ == "__main__":
     vpn_host = sys.argv[1]
