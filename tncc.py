@@ -26,6 +26,11 @@ import pyasn1_modules.rfc2459
 import pyasn1.codec.der.decoder
 import xml.etree.ElementTree
 
+
+# period host checking
+import sched, time
+s = sched.scheduler(time.time, time.sleep)
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 debug = False
@@ -178,7 +183,7 @@ def encode_0ce5(s):
 def encode_0ce7(s, prefix):
     s += '\0'
     return encode_packet(0x0ce7, 1, struct.pack(">I" + str(len(s)) + "sx",
-                                prefix, s))
+                                prefix, str(s)))
 
 # 0cf0 - encapsulation
 def encode_0cf0(buf):
@@ -263,7 +268,7 @@ class tncc(object):
     def __init__(self, vpn_host, device_id=None, funk=None, platform=None, hostname=None, mac_addrs=[], certs=[]):
         self.vpn_host = vpn_host
         self.path = '/dana-na/'
-
+        
         self.funk = funk
         self.platform = platform
         self.hostname = hostname
@@ -272,6 +277,15 @@ class tncc(object):
 
         self.deviceid = device_id
 
+        self.setup_mechanize()
+
+    def find_cookie(self, name):
+        for cookie in self.cj:
+            if cookie.name == name:
+                return cookie
+        return None
+    
+    def setup_mechanize(self):
         self.br = mechanize.Browser()
 
         self.cj = cookielib.LWPCookieJar()
@@ -295,12 +309,6 @@ class tncc(object):
 
         self.user_agent = 'Neoteris HC Http'
         self.br.addheaders = [('User-agent', self.user_agent)]
-
-    def find_cookie(self, name):
-        for cookie in self.cj:
-            if cookie.name == name:
-                return cookie
-        return None
 
     def set_cookie(self, name, value):
         cookie = cookielib.Cookie(version=0, name=name, value=value,
@@ -459,7 +467,6 @@ class tncc(object):
         return encode_0ce7(msg, MSG_POLICY)
 
     def get_cookie(self, dspreauth=None, dssignin=None):
-
         if dspreauth is None or dssignin is None:
             self.r = self.br.open('https://' + self.vpn_host)
         else:
@@ -513,7 +520,7 @@ class tncc(object):
                 policy_objs += self.parse_policy_response(sub_str)
             elif str_id == MSG_FUNK:
                 req_certs = self.parse_funk_response(sub_str)
-
+                
         if debug:
             for obj in policy_objs:
                 if 'policy' in obj:
@@ -564,13 +571,28 @@ class tncc(object):
         post_data = ''.join([ '%s=%s;' % (k, v) for k, v in post_attrs.iteritems()])
         self.r = self.br.open('https://' + self.vpn_host + self.path + 'hc/tnchcupdate.cgi', post_data)
 
+        response = self.parse_response()
+
+        # msg has the stuff we want, it's base64 encoded
+        logging.debug('Receiving packet -')
+
+	    self.hc_interval = int(response['msg'].split("interval=")[1].split("SESSION")[0])
+
         # We have a new DSPREAUTH cookie
+        self.set_cookie('DSPREAUTH_HC', self.find_cookie('DSPREAUTH').value)
         return self.find_cookie('DSPREAUTH')
 
 class tncc_server(object):
     def __init__(self, s, t):
         self.sock = s
         self.tncc = t
+
+    def do_hc(self, sc):
+        hc_cookie=self.tncc.find_cookie('DSPREAUTH_HC').value
+        self.tncc.setup_mechanize()
+	    self.tncc.get_cookie(hc_cookie, 'url_default').value
+        logging.info("==== End periodic host checking... Next host check scheduled...")
+	    sc.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (sc,))
 
     def process_cmd(self):
         buf = sock.recv(1024).decode('ascii')
@@ -589,8 +611,10 @@ class tncc_server(object):
             resp = '200\n3\n%s\n\n' % cookie.value
             sock.send(resp.encode('ascii'))
         elif cmd == 'setcookie':
-            # FIXME: Support for periodic updates
-            dsid_value = args['Cookie']
+            self.tncc.set_cookie('DSPREAUTH_HC', args['Cookie'])
+            s.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (s,))
+	        s.run()
+	        logging.debug("==== Performed first periodic host check, going into a timed loop...")
 
 if __name__ == "__main__":
     vpn_host = sys.argv[1]
@@ -633,10 +657,9 @@ if __name__ == "__main__":
         dspreauth_value = sys.argv[2]
         dssignin_value = sys.argv[3]
         'TNCC ', dspreauth_value, dssignin_value
-        print t.get_cookie(dspreauth, dssignin).value
+        print t.get_cookie(dspreauth_value, dssignin_value).value
     else:
         sock = socket.fromfd(0, socket.AF_UNIX, socket.SOCK_SEQPACKET)
         server = tncc_server(sock, t)
         while True:
             server.process_cmd()
-
