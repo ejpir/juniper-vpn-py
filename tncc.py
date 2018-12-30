@@ -27,7 +27,7 @@ import pyasn1.codec.der.decoder
 import xml.etree.ElementTree
 
 
-# import sched for period host checking
+# import time, sched for period host checking
 import sched, time
 
 ssl._create_default_https_context = ssl._create_unverified_context
