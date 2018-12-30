@@ -467,6 +467,7 @@ class tncc(object):
         return encode_0ce7(msg, MSG_POLICY)
 
     def get_cookie(self, dspreauth=None, dssignin=None):
+
         if dspreauth is None or dssignin is None:
             self.r = self.br.open('https://' + self.vpn_host)
         else:
