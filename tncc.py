@@ -520,7 +520,7 @@ class tncc(object):
                 policy_objs += self.parse_policy_response(sub_str)
             elif str_id == MSG_FUNK:
                 req_certs = self.parse_funk_response(sub_str)
-                
+
         if debug:
             for obj in policy_objs:
                 if 'policy' in obj:
