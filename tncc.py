@@ -303,7 +303,7 @@ class tncc(object):
 
         self.user_agent = 'Neoteris HC Http'
         self.br.addheaders = [('User-agent', self.user_agent)]
-	
+
     def find_cookie(self, name):
         for cookie in self.cj:
             if cookie.name == name:
