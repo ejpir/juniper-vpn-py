@@ -27,7 +27,7 @@ import pyasn1.codec.der.decoder
 import xml.etree.ElementTree
 
 
-# period host checking
+# import sched for period host checking
 import sched, time
 s = sched.scheduler(time.time, time.sleep)
 
@@ -278,13 +278,7 @@ class tncc(object):
         self.deviceid = device_id
 
         self.setup_mechanize()
-
-    def find_cookie(self, name):
-        for cookie in self.cj:
-            if cookie.name == name:
-                return cookie
-        return None
-    
+	
     def setup_mechanize(self):
         self.br = mechanize.Browser()
 
@@ -309,6 +303,12 @@ class tncc(object):
 
         self.user_agent = 'Neoteris HC Http'
         self.br.addheaders = [('User-agent', self.user_agent)]
+	
+    def find_cookie(self, name):
+        for cookie in self.cj:
+            if cookie.name == name:
+                return cookie
+        return None
 
     def set_cookie(self, name, value):
         cookie = cookielib.Cookie(version=0, name=name, value=value,
@@ -611,8 +611,8 @@ class tncc_server(object):
         elif cmd == 'setcookie':
             self.tncc.set_cookie('DSPREAUTH_HC', args['Cookie'])
             s.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (s,))
-	        s.run()
-	        logging.debug("==== Performed first periodic host check, going into a timed loop...")
+            s.run()
+            logging.debug("==== Performed first periodic host check, going into a timed loop...")
 
 if __name__ == "__main__":
     vpn_host = sys.argv[1]
