@@ -571,15 +571,13 @@ class tncc(object):
         post_data = ''.join([ '%s=%s;' % (k, v) for k, v in post_attrs.iteritems()])
         self.r = self.br.open('https://' + self.vpn_host + self.path + 'hc/tnchcupdate.cgi', post_data)
 
-        response = self.parse_response()
-
-        # msg has the stuff we want, it's base64 encoded
-        logging.debug('Receiving packet -')
-
-	    self.hc_interval = int(response['msg'].split("interval=")[1].split("SESSION")[0])
-
         # We have a new DSPREAUTH cookie
         self.set_cookie('DSPREAUTH_HC', self.find_cookie('DSPREAUTH').value)
+	
+	# parse the response to retrieve the periodic host checking interval
+        response = self.parse_response()
+	self.hc_interval = int(response['msg'].split("interval=")[1].split("SESSION")[0])
+	
         return self.find_cookie('DSPREAUTH')
 
 class tncc_server(object):
@@ -590,9 +588,9 @@ class tncc_server(object):
     def do_hc(self, sc):
         hc_cookie=self.tncc.find_cookie('DSPREAUTH_HC').value
         self.tncc.setup_mechanize()
-	    self.tncc.get_cookie(hc_cookie, 'url_default').value
+	self.tncc.get_cookie(hc_cookie, 'url_default').value
         logging.info("==== End periodic host checking... Next host check scheduled...")
-	    sc.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (sc,))
+	sc.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (sc,))
 
     def process_cmd(self):
         buf = sock.recv(1024).decode('ascii')
