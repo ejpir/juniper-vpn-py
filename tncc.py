@@ -268,7 +268,7 @@ class tncc(object):
     def __init__(self, vpn_host, device_id=None, funk=None, platform=None, hostname=None, mac_addrs=[], certs=[]):
         self.vpn_host = vpn_host
         self.path = '/dana-na/'
-        
+
         self.funk = funk
         self.platform = platform
         self.hostname = hostname
@@ -661,3 +661,4 @@ if __name__ == "__main__":
         server = tncc_server(sock, t)
         while True:
             server.process_cmd()
+
