@@ -29,7 +29,6 @@ import xml.etree.ElementTree
 
 # import sched for period host checking
 import sched, time
-s = sched.scheduler(time.time, time.sleep)
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -585,6 +584,8 @@ class tncc_server(object):
     def __init__(self, s, t):
         self.sock = s
         self.tncc = t
+	self.hc_scheduler = sched.scheduler(time.time, time.sleep)
+
 
     def do_hc(self, sc):
         hc_cookie=self.tncc.find_cookie('DSPREAUTH_HC').value
@@ -611,8 +612,8 @@ class tncc_server(object):
             sock.send(resp.encode('ascii'))
         elif cmd == 'setcookie':
             self.tncc.set_cookie('DSPREAUTH_HC', args['Cookie'])
-            s.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (s,))
-            s.run()
+            self.hc_scheduler.enter((60*(self.tncc.hc_interval-1)), 1, self.do_hc, (self.hc_scheduler,))
+            self.hc_scheduler.run()
             logging.debug("==== Performed first periodic host check, going into a timed loop...")
 
 if __name__ == "__main__":
